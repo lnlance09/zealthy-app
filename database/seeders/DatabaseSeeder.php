@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
                 'middle_name' => $name['middle'],
                 'last_name' => $name['last'],
                 'email' => $email,
-                'password' => $password
+                'password' => sha1($password)
             ]);
 
             $appointments = $u->appointments;
@@ -60,7 +60,7 @@ class DatabaseSeeder extends Seeder
                 $provider = Provider::firstOrCreate([
                     'name' => $a->provider
                 ]);
-                Appointment::create([
+                Appointment::factory()->create([
                     'provider_id' => $provider->id,
                     'user_id' => $id,
                     'datetime' => $a->datetime,
@@ -76,7 +76,7 @@ class DatabaseSeeder extends Seeder
                 $dosage = Dosage::firstOrCreate([
                     'amount' => $p->dosage
                 ]);
-                Prescription::create([
+                Prescription::factory()->create([
                     'user_id' => $id,
                     'medication_id' => $medication->id,
                     'dosage_id' => $dosage->id,

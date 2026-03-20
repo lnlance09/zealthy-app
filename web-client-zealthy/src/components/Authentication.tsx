@@ -1,12 +1,12 @@
-import { Button, Divider, Form, Header, Icon, Input, Transition } from "semantic-ui-react"
-import { useEffect, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import { setUserData, resetUserData } from "../reducers/app"
-import { ReduxState } from "../interfaces"
-import { setSessionData, resetSessionData } from "../utils/auth"
+import { Button, Divider, Form, Header, Input, Message } from "semantic-ui-react"
+import { useState } from "react"
+import { useDispatch } from "react-redux"
+import { setUserData } from "../reducers/app"
+import { setSessionData } from "../utils/auth"
 import { toast } from "react-toastify"
 import { toastConfig } from "../utils/toast"
 import axios from "axios"
+import isEmail from "validator/lib/isEmail"
 
 type ButtonSize = "medium" | "large"
 type Props = {
@@ -18,7 +18,6 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
     const dispatch = useDispatch()
 
     const [showLogin, setShowLogin] = useState(login)
-
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [loadingLogin, setLoadingLogin] = useState(false)
@@ -28,13 +27,13 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
     const [regPassword, setRegPassword] = useState("")
     const [loadingRegistration, setLoadingRegistration] = useState(false)
 
-    const loginDisabled = email.length < 4 || password.length < 8
-    const registerDisabled = regEmail.length < 4 || regPassword.length < 8 || regName.length < 4
+    const loginDisabled = !isEmail(email) || password.length < 8
+    const registerDisabled = !isEmail(regEmail) || regPassword.length < 8 || regName.length < 4
 
-    const submitLoginForm = (email: string, password: string) => {
+    const submitLoginForm = async (email: string, password: string) => {
         setLoadingLogin(true)
-        axios
-            .post(`${import.meta.env.VITE_API_BASE_URL}users/login`, {
+        await axios
+            .post(`${import.meta.env.VITE_API_BASE_URL}user/login`, {
                 email,
                 password
             })
@@ -58,15 +57,15 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
                         errorMsg = errors.email[0]
                     }
                 }
-                setLoadingLogin(false)
                 toast.error(errorMsg, toastConfig)
             })
+        setLoadingLogin(false)
     }
 
-    const submitRegistrationForm = (name: string, email: string, password: string) => {
+    const submitRegistrationForm = async (name: string, email: string, password: string) => {
         setLoadingRegistration(true)
-        axios
-            .post(`${import.meta.env.VITE_API_BASE_URL}users/register`, {
+        await axios
+            .post(`${import.meta.env.VITE_API_BASE_URL}user/register`, {
                 name,
                 email,
                 password
@@ -93,9 +92,9 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
                         errorMsg = errors.email[0]
                     }
                 }
-                setLoadingRegistration(false)
                 toast.error(errorMsg, toastConfig)
             })
+        setLoadingRegistration(false)
     }
 
     return (
@@ -107,14 +106,14 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
                         <Form size={size}>
                             <Form.Field>
                                 <Input
-                                    onChange={(e, { value }) => setEmail(value)}
+                                    onChange={(_e, { value }) => setEmail(value)}
                                     placeholder="Email"
                                     value={email}
                                 />
                             </Form.Field>
                             <Form.Field>
                                 <Input
-                                    onChange={(e, { value }) => setPassword(value)}
+                                    onChange={(_e, { value }) => setPassword(value)}
                                     placeholder="Password"
                                     type="password"
                                     value={password}
@@ -131,23 +130,23 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
                             onClick={() => submitLoginForm(email, password)}
                             size={size}
                         />
-                        <Header onClick={() => setShowLogin(false)} size="small" textAlign="center">
-                            Sign Up
-                        </Header>
+                        <Message onClick={() => setShowLogin(false)} size="small">
+                            <a href="#">Sign Up</a>
+                        </Message>
                     </>
                 ) : (
                     <>
                         <Form size={size}>
                             <Form.Field>
                                 <Input
-                                    onChange={(e, { value }) => setRegEmail(value)}
+                                    onChange={(_e, { value }) => setRegEmail(value)}
                                     placeholder="Email"
                                     value={regEmail}
                                 />
                             </Form.Field>
                             <Form.Field>
                                 <Input
-                                    onChange={(e, { value }) => setRegPassword(value)}
+                                    onChange={(_e, { value }) => setRegPassword(value)}
                                     placeholder="Password"
                                     value={regPassword}
                                     type="password"
@@ -155,7 +154,7 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
                             </Form.Field>
                             <Form.Field>
                                 <Input
-                                    onChange={(e, { value }) => setRegName(value)}
+                                    onChange={(_e, { value }) => setRegName(value)}
                                     placeholder="Name"
                                     value={regName}
                                 />
@@ -171,9 +170,9 @@ const AuthenticationForm = ({ login = true, size = "large" }: Props) => {
                             onClick={() => submitRegistrationForm(regName, regEmail, regPassword)}
                             size={size}
                         />
-                        <Header onClick={() => setShowLogin(true)} size="small" textAlign="center">
-                            Sign In
-                        </Header>
+                        <Message onClick={() => setShowLogin(true)} size="small">
+                            <a href="#">Sign In</a>
+                        </Message>
                     </>
                 )}
             </div>

@@ -1,5 +1,8 @@
 import { AppState, Dosage, Medication, Provider } from "@interfaces/index"
 
+const auth = localStorage.getItem("auth")
+const user = localStorage.getItem("user")
+
 export const defaultUser = {
     id: 0,
     email: "",
@@ -32,6 +35,6 @@ export const defaultDoseage: Dosage = {
 }
 
 export const initialAppState: AppState = {
-    auth: false,
-    user: defaultUser
+    auth: auth === "1",
+    user: user ? JSON.parse(user) : { ...defaultUser }
 }

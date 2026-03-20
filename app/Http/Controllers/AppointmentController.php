@@ -29,7 +29,7 @@ class AppointmentController extends Controller
         $request->validate([
             'userId' => 'bail|required|exists:users,id',
             'providerId' => 'bail|required|exists:providers,id',
-            'datetime' => 'required|date_format:yyyy-MM-dd HH:mm:ss',
+            'datetime' => 'required|date|after:today|date_format:Y-m-d H:i:s',
             'repeat' => function ($rs) {
                 return in_array($rs, ['daily', 'weekly', 'monthly']);
             }
@@ -59,16 +59,19 @@ class AppointmentController extends Controller
     {
         $request->validate([
             'id' => 'bail|required|exists:appointments,id',
-            'datetime' => 'required|date_format:yyyy-MM-dd HH:mm:ss',
+            'providerId' => 'bail|required|exists:providers,id',
+            'datetime' => 'required|date|after:today|date_format:Y-m-d H:i:s',
             'repeat' => function ($rs) {
                 return in_array($rs, ['daily', 'weekly', 'monthly']);
             }
         ]);
         $id = $request->input('id');
+        $providerId = $request->input('providerId');
         $datetime = $request->input('datetime');
         $repeat = $request->input('repeat');
 
         $appointment = Appointment::find($id);
+        $appointment->provider_id = $providerId;
         $appointment->datetime = $datetime;
         $appointment->repeat = $repeat;
         $appointment->save();

@@ -14,6 +14,8 @@ export const formatPlural = (count: number, term: string) => {
 
 export const writeFullName = (name: FullNameType) => [name.first, name.middle, name.last].join(" ")
 
+export const dateFormat = "yyyy-MM-dd HH:mm:ss"
+
 export const frequencies = ["daily", "weekly", "monthly"].map((r, i) => {
     return {
         id: i + 1,

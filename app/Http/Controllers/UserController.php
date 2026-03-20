@@ -63,7 +63,7 @@ class UserController extends Controller
     public function create(Request $request)
     {
         $request->validate([
-            'name' => 'bail|required|max:40|min:4|alpha_dash',
+            'name' => 'bail|required|max:40|min:4|regex:/^[a-zA-Z ]+$/',
             'email' => 'bail|required|email|unique:users'
         ]);
 
@@ -109,7 +109,7 @@ class UserController extends Controller
 
         $user = User::find($id);
         $user->first_name = $names[0];
-        $user->middle_name = count($names) > 1 ? $names[1] : null;
+        $user->middle_name = count($names) > 2 ? $names[1] : null;
         $user->last_name = end($names);
         $user->email = $email;
         $user->save();
@@ -127,7 +127,7 @@ class UserController extends Controller
     public function login(Request $request): Response
     {
         $request->validate([
-            'email' => 'bail|required|email|unique:users',
+            'email' => 'bail|required|email',
             'password' => ['bail', 'required', Password::min(8)],
         ]);
         $email = $request->input('email');

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { setActiveUser } from "../reducers/admin"
 import { useDispatch, useSelector } from "react-redux"
 import { Button, Card, Divider, Form, Input, List, Select } from "semantic-ui-react"
-import { dosageOptions, frequencies, medicationOptions } from "../utils/general"
+import { dateFormat, dosageOptions, frequencies, medicationOptions } from "../utils/general"
 import { DateTime } from "luxon"
 import { Prescription, ReduxState } from "../interfaces"
 import { toast } from "react-toastify"
@@ -14,6 +14,7 @@ interface Params extends Prescription {
     createMode?: boolean
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     createCallback?: () => any
+    editable?: boolean
     isEditMode?: boolean
     userId: number
 }
@@ -22,6 +23,7 @@ const PrescriptionCard = ({
     createMode = false,
     createCallback = () => null,
     isEditMode = false,
+    editable = true,
     userId,
     id,
     medication,
@@ -75,7 +77,7 @@ const PrescriptionCard = ({
             )
             .then(() => {
                 getUser(userId)
-                toast("Prescription has been created!", toastConfig)
+                toast.success("Prescription has been created!", toastConfig)
                 createCallback()
             })
             .catch((error) => {
@@ -126,7 +128,7 @@ const PrescriptionCard = ({
                 refillSchedule
             })
             .then(() => {
-                toast("Prescription has been updated!", toastConfig)
+                toast.success("Prescription has been updated!", toastConfig)
                 getUser(userId)
                 setEditMode(false)
             })
@@ -165,7 +167,7 @@ const PrescriptionCard = ({
             .delete(`${import.meta.env.VITE_API_BASE_URL}prescription/delete?id=${id}`)
             .then(() => {
                 getUser(userId)
-                toast("Prescription has been deleted!", toastConfig)
+                toast.success("Prescription has been deleted!", toastConfig)
                 setEditMode(false)
             })
             .catch(() => {
@@ -180,7 +182,12 @@ const PrescriptionCard = ({
                 <Select
                     fluid
                     options={medicationOptions(medications)}
-                    onChange={(e, { value }) => setMedicationId(parseInt(`${value}`))}
+                    onChange={(_e, { value }) => {
+                        if (typeof value !== "number") {
+                            return
+                        }
+                        setMedicationId(value)
+                    }}
                     value={medicationId}
                 />
             </Form.Field>
@@ -189,7 +196,12 @@ const PrescriptionCard = ({
                 <Select
                     fluid
                     options={dosageOptions(dosages)}
-                    onChange={(e, { value }) => setDosageId(parseInt(`${value}`))}
+                    onChange={(_e, { value }) => {
+                        if (typeof value !== "number") {
+                            return
+                        }
+                        setDosageId(value)
+                    }}
                     value={dosageId}
                 />
             </Form.Field>
@@ -197,11 +209,14 @@ const PrescriptionCard = ({
                 <label>Quantity</label>
                 <Input
                     fluid
-                    onChange={(e, { value }) => {
-                        if (parseInt(`${value}`) < 1) {
+                    onChange={(_e, { value }) => {
+                        if (typeof value !== "string") {
                             return
                         }
-                        setQuantityValue(parseInt(`${value}`))
+                        if (parseInt(value) < 1) {
+                            return
+                        }
+                        setQuantityValue(parseInt(value))
                     }}
                     placeholder="Quantity"
                     type="number"
@@ -212,14 +227,14 @@ const PrescriptionCard = ({
                 <label>Refill On</label>
                 <SemanticDatepicker
                     format="MM-DD-YYYY"
-                    onChange={(e, data) => {
+                    onChange={(_e, data) => {
                         const newDate = DateTime.fromMillis(Date.parse(`${data.value}`)).toFormat(
-                            "yyyy-MM-dd HH:mm:ss"
+                            dateFormat
                         )
                         setRefillOnValue(newDate)
                     }}
                     showToday
-                    value={DateTime.fromFormat(refillOnValue, "yyyy-MM-dd HH:mm:ss").toJSDate()}
+                    value={DateTime.fromFormat(refillOnValue, dateFormat).toJSDate()}
                 />
             </Form.Field>
             <Form.Field>
@@ -227,8 +242,11 @@ const PrescriptionCard = ({
                 <Select
                     fluid
                     options={frequencies}
-                    onChange={(e, { value }) => {
-                        setRefillScheduleValue(`${value}`)
+                    onChange={(_e, { value }) => {
+                        if (typeof value !== "string") {
+                            return
+                        }
+                        setRefillScheduleValue(value)
                     }}
                     value={refillScheduleValue}
                 />
@@ -290,7 +308,7 @@ const PrescriptionCard = ({
             </List.Item>
             <List.Item>
                 <b>Refill on:</b>{" "}
-                {DateTime.fromFormat(refillOn, "yyyy-MM-dd HH:mm:ss").toFormat("MMM d, yyyy")}
+                {DateTime.fromFormat(refillOn, dateFormat).toFormat("MMM d, yyyy")}
             </List.Item>
             <List.Item>
                 <b>Refill schedule:</b> {refillSchedule}
@@ -326,7 +344,7 @@ const PrescriptionCard = ({
                     {editMode || createMode ? <>{CardEditMode}</> : <>{CardContent}</>}
                 </Card.Description>
             </Card.Content>
-            {!createMode && (
+            {!createMode && editable && (
                 <Card.Content extra>
                     {editMode ? <>{CardExtraEditMode}</> : <>{CardExtra}</>}
                 </Card.Content>

@@ -3,7 +3,7 @@ import { setActiveUser } from "../reducers/admin"
 import { useDispatch, useSelector } from "react-redux"
 import { Button, Card, Divider, Form, List, Select } from "semantic-ui-react"
 import { Appointment, ReduxState } from "../interfaces"
-import { frequencies, providerOptions, writeFullName } from "../utils/general"
+import { dateFormat, frequencies, providerOptions } from "../utils/general"
 import { DateTime } from "luxon"
 import { toast } from "react-toastify"
 import { toastConfig } from "../utils/toast"
@@ -14,6 +14,7 @@ interface Params extends Appointment {
     createMode?: boolean
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     createCallback?: () => any
+    editable?: boolean
     isEditMode?: boolean
 }
 
@@ -21,6 +22,7 @@ const AppointmentCard = ({
     createMode = false,
     createCallback = () => null,
     isEditMode = false,
+    editable = true,
     id,
     user,
     provider,
@@ -34,7 +36,7 @@ const AppointmentCard = ({
     const [editMode, setEditMode] = useState(isEditMode)
     const [datetimeValue, setDatetimeValue] = useState(datetime)
     const [repeatValue, setRepeatValue] = useState(repeat)
-    const [providerValue, setProviderValue] = useState(0)
+    const [providerValue, setProviderValue] = useState(provider.id)
 
     const getUser = (id: number) => {
         axios
@@ -55,13 +57,12 @@ const AppointmentCard = ({
             .post(`${import.meta.env.VITE_API_BASE_URL}appointment/create`, {
                 userId,
                 providerId,
-                datetime: DateTime.fromISO(new Date(datetime).toISOString()).toFormat(
-                    "yyyy-MM-dd HH:mm:ss"
-                ),
+                datetime: DateTime.fromISO(new Date(datetime).toISOString()).toFormat(dateFormat),
                 repeat
             })
             .then(() => {
-                toast("Appointment has been updated!", toastConfig)
+                toast.success("Appointment has been created!", toastConfig)
+                createCallback()
                 getUser(user.id)
                 setEditMode(false)
             })
@@ -78,7 +79,7 @@ const AppointmentCard = ({
                     if (errors.providerId) {
                         errorMsg = errors.providerId[0]
                     }
-                    if (errors.dateime) {
+                    if (errors.datetime) {
                         errorMsg = errors.datetime[0]
                     }
                     if (errors.repeat) {
@@ -99,13 +100,11 @@ const AppointmentCard = ({
             .put(`${import.meta.env.VITE_API_BASE_URL}appointment/update`, {
                 id,
                 providerId,
-                datetime: DateTime.fromISO(new Date(datetime).toISOString()).toFormat(
-                    "yyyy-MM-dd HH:mm:ss"
-                ),
+                datetime: DateTime.fromISO(new Date(datetime).toISOString()).toFormat(dateFormat),
                 repeat
             })
             .then(() => {
-                toast("Appointment has been updated!", toastConfig)
+                toast.success("Appointment has been updated!", toastConfig)
                 getUser(user.id)
                 setEditMode(false)
             })
@@ -122,7 +121,7 @@ const AppointmentCard = ({
                     if (errors.providerId) {
                         errorMsg = errors.providerId[0]
                     }
-                    if (errors.dateime) {
+                    if (errors.datetime) {
                         errorMsg = errors.datetime[0]
                     }
                     if (errors.repeat) {
@@ -138,7 +137,7 @@ const AppointmentCard = ({
             .delete(`${import.meta.env.VITE_API_BASE_URL}appointment/delete?id=${id}`)
             .then(() => {
                 getUser(user.id)
-                toast("Appointment has been deleted!", toastConfig)
+                toast.success("Appointment has been deleted!", toastConfig)
                 setEditMode(false)
             })
             .catch(() => {
@@ -151,8 +150,10 @@ const AppointmentCard = ({
             <Card.Content>
                 {!createMode && (
                     <>
-                        <Card.Header>{writeFullName(user.name)}</Card.Header>
-                        <Card.Meta>{provider.name}</Card.Meta>
+                        <Card.Header>{provider.name}</Card.Header>
+                        <Card.Meta>
+                            {DateTime.fromFormat(datetime, dateFormat).toFormat("MMM d, yyyy")}
+                        </Card.Meta>
                     </>
                 )}
                 <Card.Description>
@@ -163,9 +164,12 @@ const AppointmentCard = ({
                                 <Select
                                     fluid
                                     options={providerOptions(providers)}
-                                    onChange={(e, { value }) =>
-                                        setProviderValue(parseInt(`${value}`))
-                                    }
+                                    onChange={(_e, { value }) => {
+                                        if (typeof value !== "number") {
+                                            return
+                                        }
+                                        setProviderValue(value)
+                                    }}
                                     value={providerValue}
                                 />
                             </Form.Field>
@@ -173,16 +177,16 @@ const AppointmentCard = ({
                                 <label>Date</label>
                                 <SemanticDatepicker
                                     format="MM-DD-YYYY"
-                                    onChange={(e, data) => {
+                                    onChange={(_e, data) => {
                                         const newDate = DateTime.fromMillis(
                                             Date.parse(`${data.value}`)
-                                        ).toFormat("yyyy-MM-dd HH:mm:ss")
+                                        ).toFormat(dateFormat)
                                         setDatetimeValue(newDate)
                                     }}
                                     showToday
                                     value={DateTime.fromFormat(
                                         datetimeValue,
-                                        "yyyy-MM-dd HH:mm:ss"
+                                        dateFormat
                                     ).toJSDate()}
                                 />
                             </Form.Field>
@@ -191,7 +195,12 @@ const AppointmentCard = ({
                                 <Select
                                     fluid
                                     options={frequencies}
-                                    onChange={(e, { value }) => setRepeatValue(`${value}`)}
+                                    onChange={(_e, { value }) => {
+                                        if (typeof value !== "string") {
+                                            return
+                                        }
+                                        setRepeatValue(value)
+                                    }}
                                     value={repeatValue}
                                 />
                             </Form.Field>
@@ -201,7 +210,12 @@ const AppointmentCard = ({
                                     content="Create"
                                     fluid
                                     onClick={() => {
-                                        createAppointment(user.id, datetimeValue, repeatValue)
+                                        createAppointment(
+                                            user.id,
+                                            providerValue,
+                                            datetimeValue,
+                                            repeatValue
+                                        )
                                     }}
                                 />
                             )}
@@ -209,19 +223,13 @@ const AppointmentCard = ({
                     ) : (
                         <List>
                             <List.Item>
-                                <b>Date:</b>{" "}
-                                {DateTime.fromFormat(datetimeValue, "yyyy-MM-dd HH:mm:ss").toFormat(
-                                    "MMM d, yyyy"
-                                )}
-                            </List.Item>
-                            <List.Item>
                                 <b>Repeat:</b> {repeatValue}
                             </List.Item>
                         </List>
                     )}
                 </Card.Description>
             </Card.Content>
-            {!createMode && (
+            {!createMode && editable && (
                 <Card.Content extra>
                     {editMode ? (
                         <>
@@ -229,7 +237,9 @@ const AppointmentCard = ({
                                 color="blue"
                                 content="Save"
                                 fluid
-                                onClick={() => updateAppointment(id, datetimeValue, repeatValue)}
+                                onClick={() =>
+                                    updateAppointment(id, providerValue, datetimeValue, repeatValue)
+                                }
                             />
                             <Divider />
                             <Button
