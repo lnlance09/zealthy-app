@@ -69,6 +69,9 @@ export type AdminState = {
 
 export type AppState = {
     auth: boolean
+    dosages: Dosage[]
+    medications: Medication[]
+    providers: Provider[]
     user: ExtendedUser
 }
 

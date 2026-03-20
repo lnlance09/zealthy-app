@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { Form, Select } from "semantic-ui-react"
-import { dateFormat, dosageOptions, frequencies, medicationOptions } from "../utils/general"
+import { dosageOptions, frequencies, medicationOptions } from "../utils/general"
 import { setUserPrescriptions } from "../reducers/admin"
+import { setPrescriptions } from "../reducers/app"
 import { Dosage, Medication, Prescription } from "../interfaces"
 import SemanticDatepicker from "react-semantic-ui-datepickers"
 
@@ -11,9 +12,16 @@ interface Params {
     prescriptionsFiltered: Prescription[]
     dosages: Dosage[]
     meds: Medication[]
+    src?: "admin" | "app"
 }
 
-const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, meds }: Params) => {
+const PrescriptionFilters = ({
+    prescriptions,
+    prescriptionsFiltered,
+    dosages,
+    meds,
+    src = "admin"
+}: Params) => {
     const dispatch = useDispatch()
 
     const [med, setMed] = useState(0)
@@ -62,12 +70,16 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
     const filterByDate = (prescriptions: Prescription[], date: number) =>
         [...prescriptions].filter((p) => new Date(p.refillOn).getTime() >= date)
 
+    const filterBySchedule = (prescriptions: Prescription[], schedule: string) =>
+        [...prescriptions].filter((p) => p.refillSchedule === schedule)
+
     const filterAll = (
         prescriptions: Prescription[],
         med: number,
         minDosage: number,
         maxDosage: number,
-        minDate: number
+        minDate = 0,
+        refillSchedule = ""
     ) => {
         let _prescriptions = prescriptions
         if (med !== 0) {
@@ -75,21 +87,21 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
         }
         if (minDosage) {
             const amount = getSelectedAmount(minDosage)
-            console.log("filter all min dosage", amount)
             if (amount) {
                 _prescriptions = filterByMinAmount(_prescriptions, amount)
             }
         }
         if (maxDosage) {
             const amount = getSelectedAmount(maxDosage)
-            console.log("filter all max dosage", amount)
             if (amount) {
                 _prescriptions = filterByMaxAmount(_prescriptions, amount)
             }
         }
         if (minDate) {
-            console.log("filter all date", minDate)
             _prescriptions = filterByDate(_prescriptions, minDate)
+        }
+        if (refillSchedule !== "all") {
+            _prescriptions = filterBySchedule(_prescriptions, refillSchedule)
         }
         return _prescriptions
     }
@@ -106,18 +118,34 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
                         }
                         setMed(value)
                         if (value === 0) {
-                            dispatch(setUserPrescriptions({ prescriptions: [...prescriptions] }))
+                            if (src === "admin") {
+                                dispatch(
+                                    setUserPrescriptions({ prescriptions: [...prescriptions] })
+                                )
+                            } else {
+                                dispatch(setPrescriptions({ prescriptions: [...prescriptions] }))
+                            }
+                            return
+                        }
+                        const _prescriptions = filterAll(
+                            prescriptions,
+                            value,
+                            minDosage,
+                            maxDosage,
+                            minDate,
+                            schedule
+                        )
+                        if (src === "admin") {
+                            dispatch(
+                                setUserPrescriptions({
+                                    prescriptions: _prescriptions
+                                })
+                            )
                             return
                         }
                         dispatch(
-                            setUserPrescriptions({
-                                prescriptions: filterAll(
-                                    prescriptions,
-                                    value,
-                                    minDosage,
-                                    maxDosage,
-                                    minDate
-                                )
+                            setPrescriptions({
+                                prescriptions: _prescriptions
                             })
                         )
                     }}
@@ -151,15 +179,25 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
                                 return
                             }
                             setMinDosage(value)
+                            const _prescriptions = filterAll(
+                                prescriptions,
+                                med,
+                                value,
+                                maxDosage,
+                                minDate,
+                                schedule
+                            )
+                            if (src === "admin") {
+                                dispatch(
+                                    setUserPrescriptions({
+                                        prescriptions: _prescriptions
+                                    })
+                                )
+                                return
+                            }
                             dispatch(
-                                setUserPrescriptions({
-                                    prescriptions: filterAll(
-                                        prescriptions,
-                                        med,
-                                        value,
-                                        maxDosage,
-                                        minDate
-                                    )
+                                setPrescriptions({
+                                    prescriptions: _prescriptions
                                 })
                             )
                         }}
@@ -188,19 +226,29 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
                             }
                             const currentAmount = getSelectedAmount(value)
                             const minAmount = getSelectedAmount(minDosage)
-                            if (minAmount && currentAmount ? currentAmount < minAmount : false) {
+                            if (minAmount && currentAmount && currentAmount < minAmount) {
                                 return
                             }
                             setMaxDosage(value)
+                            const _prescriptions = filterAll(
+                                prescriptions,
+                                med,
+                                minDosage,
+                                value,
+                                minDate,
+                                schedule
+                            )
+                            if (src === "admin") {
+                                dispatch(
+                                    setUserPrescriptions({
+                                        prescriptions: _prescriptions
+                                    })
+                                )
+                                return
+                            }
                             dispatch(
-                                setUserPrescriptions({
-                                    prescriptions: filterAll(
-                                        prescriptions,
-                                        med,
-                                        minDosage,
-                                        value,
-                                        minDate
-                                    )
+                                setPrescriptions({
+                                    prescriptions: _prescriptions
                                 })
                             )
                         }}
@@ -222,23 +270,56 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
             <Form.Field>
                 <label>Refill starting on</label>
                 <SemanticDatepicker
+                    clearable
                     datePickerOnly
                     format="MM-DD-YYYY"
                     onChange={(_e, data) => {
                         const date = data.value?.valueOf()
                         if (typeof date !== "number") {
+                            setMinDate(0)
+                            const _prescriptions = filterAll(
+                                prescriptions,
+                                med,
+                                minDosage,
+                                maxDosage,
+                                0,
+                                schedule
+                            )
+                            if (src === "admin") {
+                                dispatch(
+                                    setUserPrescriptions({
+                                        prescriptions: _prescriptions
+                                    })
+                                )
+                                return
+                            }
+                            dispatch(
+                                setPrescriptions({
+                                    prescriptions: _prescriptions
+                                })
+                            )
                             return
                         }
-                        setMinDate(date)
+                        setMinDate(parseInt(`${date}`))
+                        const _prescriptions = filterAll(
+                            prescriptions,
+                            med,
+                            minDosage,
+                            maxDosage,
+                            date,
+                            schedule
+                        )
+                        if (src === "admin") {
+                            dispatch(
+                                setUserPrescriptions({
+                                    prescriptions: _prescriptions
+                                })
+                            )
+                            return
+                        }
                         dispatch(
-                            setUserPrescriptions({
-                                prescriptions: filterAll(
-                                    prescriptions,
-                                    med,
-                                    minDosage,
-                                    maxDosage,
-                                    date
-                                )
+                            setPrescriptions({
+                                prescriptions: _prescriptions
                             })
                         )
                     }}
@@ -266,18 +347,39 @@ const PrescriptionFilters = ({ prescriptions, prescriptionsFiltered, dosages, me
                         setSchedule(value)
 
                         if (value === "all") {
+                            if (src === "admin") {
+                                dispatch(
+                                    setUserPrescriptions({
+                                        prescriptions: [...prescriptionsFiltered]
+                                    })
+                                )
+                            }
                             dispatch(
-                                setUserPrescriptions({
+                                setPrescriptions({
                                     prescriptions: [...prescriptionsFiltered]
                                 })
                             )
                             return
                         }
-                        const _prescriptions = [...prescriptionsFiltered].filter(
-                            (p) => p.refillSchedule === value
+
+                        const _prescriptions = filterAll(
+                            prescriptions,
+                            med,
+                            minDosage,
+                            maxDosage,
+                            minDate,
+                            value
                         )
+                        if (src === "admin") {
+                            dispatch(
+                                setUserPrescriptions({
+                                    prescriptions: _prescriptions
+                                })
+                            )
+                            return
+                        }
                         dispatch(
-                            setUserPrescriptions({
+                            setPrescriptions({
                                 prescriptions: _prescriptions
                             })
                         )

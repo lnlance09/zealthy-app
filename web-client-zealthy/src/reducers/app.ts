@@ -5,8 +5,17 @@ const appSlice = createSlice({
     name: "app",
     initialState: initialAppState,
     reducers: {
+        setDosages: (state, action) => {
+            state.dosages = action.payload.dosages
+        },
+        setMedications: (state, action) => {
+            state.medications = action.payload.medications
+        },
+        setProviders: (state, action) => {
+            state.providers = action.payload.providers
+        },
         setPrescriptions: (state, action) => {
-            state.user.prescriptions.data = action.payload.prescriptions
+            state.user.prescriptionsFiltered.data = action.payload.prescriptions
         },
         setUserData: (state, action) => {
             state.auth = true
@@ -19,5 +28,12 @@ const appSlice = createSlice({
     }
 })
 
-export const { setUserData, resetUserData, setPrescriptions } = appSlice.actions
+export const {
+    setUserData,
+    resetUserData,
+    setPrescriptions,
+    setDosages,
+    setMedications,
+    setProviders
+} = appSlice.actions
 export default appSlice.reducer

@@ -71,7 +71,7 @@ class PrescriptionController extends Controller
             'medicationId' => 'bail|required|exists:medications,id',
             'dosageId' => 'bail|required|exists:dosages,id',
             'quantity' => 'bail|required',
-            'refillOn' => 'required|date_format:yyyy-MM-dd HH:mm:ss',
+            'refillOn' => 'required|date|after:today|date_format:Y-m-d H:i:s',
             'refillSchedule' => function ($rs) {
                 return in_array($rs, ['daily', 'weekly', 'monthly']);
             },

@@ -36,5 +36,8 @@ export const defaultDoseage: Dosage = {
 
 export const initialAppState: AppState = {
     auth: auth === "1",
+    dosages: [],
+    medications: [],
+    providers: [],
     user: user ? JSON.parse(user) : { ...defaultUser }
 }

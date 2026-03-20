@@ -17,7 +17,15 @@ class MedicationController extends Controller
      */
     public function index(Request $request)
     {
-        $meds = Medication::all();
+        $userId = $request->input('userId', null);
+
+        if ($userId) {
+            $meds = Medication::whereHas('prescriptions', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })->get();
+        } else {
+            $meds = Medication::all();
+        }
         return new MedicationCollection($meds);
     }
 }

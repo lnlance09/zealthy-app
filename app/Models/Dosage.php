@@ -36,6 +36,6 @@ class Dosage extends Model
 
     public function prescriptions()
     {
-        return $this->hasMany(Dosage::class, 'dosage_id', 'id');
+        return $this->hasMany(Prescription::class, 'dosage_id', 'id');
     }
 }

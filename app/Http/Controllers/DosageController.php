@@ -17,7 +17,16 @@ class DosageController extends Controller
      */
     public function index(Request $request)
     {
-        $dosages = Dosage::all();
+        $userId = $request->input('userId', null);
+
+        if ($userId) {
+            $dosages = Dosage::whereHas('prescriptions', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })->get();
+        } else {
+            $dosages = Dosage::all();
+        }
+
         return new DosageCollection($dosages);
     }
 }
